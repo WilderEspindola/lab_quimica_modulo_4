@@ -34,26 +34,33 @@ public class DualPartButton : MonoBehaviour
     private Vector3[] originalPositions;
     private bool isPressed = false;
     private Vector3 initialUIPosition; // Para guardar la posición XZ original
-
+    private float initialPistonY; // Guarda la posición Y inicial del pistón en mundo
     void Start()
     {
+        // 1. Inicializar posiciones de las partes móviles del botón físico
         originalPositions = new Vector3[movingParts.Length];
         for (int i = 0; i < movingParts.Length; i++)
         {
             originalPositions[i] = movingParts[i].localPosition;
         }
 
+        // 2. Configurar eventos de interacción XR
         XRSimpleInteractable interactable = GetComponent<XRSimpleInteractable>();
         interactable.selectEntered.AddListener(OnButtonPressed);
         interactable.selectExited.AddListener(OnButtonReleased);
 
-        // Guardar la posición inicial del UI (en espacio de mundo)
-        if (volumeUI != null)
+        // 3. Inicializar sistema de medidor de volumen
+        if (piston != null)
         {
-            initialUIPosition = volumeUI.position;
+            initialPistonY = piston.position.y; // Guarda la posición Y INICIAL del pistón en mundo
         }
 
-        UpdateVolumeUI();
+        if (volumeUI != null)
+        {
+            initialUIPosition = volumeUI.position; // Guarda posición INICIAL del UI (mundo)
+        }
+
+        UpdateVolumeUI(); // Aplica la posición inicial
     }
 
     void Update()
@@ -122,20 +129,17 @@ public class DualPartButton : MonoBehaviour
     {
         if (volumeText == null || volumeUI == null || piston == null) return;
 
-        // 1. Calcular el volumen
+        // 1. Calcular el volumen (sin cambios)
         float normalizedPosition = Mathf.InverseLerp(minPistonHeight, maxPistonHeight, piston.localPosition.y);
         float currentVolume = Mathf.Lerp(minVolume, maxVolume, normalizedPosition);
-
-        // 2. Actualizar el texto
         volumeText.text = $"--- {currentVolume.ToString("0.000")} m³ ---";
 
-        // 3. Mover el UI junto con el pistón (manteniendo XZ original)
+        // 2. Mover el UI (ajuste clave aquí)
         Vector3 newUIPosition = new Vector3(
             initialUIPosition.x,
-            piston.position.y + uiOffset.y, // Sigue la Y del pistón con offset
+            initialUIPosition.y + (piston.position.y - initialPistonY) + uiOffset.y,
             initialUIPosition.z
         );
-
         volumeUI.position = newUIPosition;
     }
 }
